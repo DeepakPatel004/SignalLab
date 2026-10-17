@@ -1,4 +1,5 @@
 #include "data_generator.hpp"
+#include "palindrome.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -29,6 +30,9 @@ int main() {
         const std::size_t zero_runs[] = {0, 4, 8};
         const auto data = generate_binary(static_cast<std::size_t>(length), zero_runs[mode - 1]);
         std::cout << "Binary stream: " << data << '\n';
+        const auto palindrome = longest_palindrome(data);
+        std::cout << "Longest palindrome: " << palindrome << '\n'
+                  << "Palindrome length: " << palindrome.size() << '\n';
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << '\n';
         return 1;
