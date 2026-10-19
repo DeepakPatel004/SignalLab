@@ -86,6 +86,28 @@ std::vector<int> choose_encoding(const std::string& data, std::string& name) {
     }
 }
 
+std::string choose_decoding(const std::vector<int>& signal) {
+    std::cout << "1. NRZ-L\n2. NRZ-I\n3. Manchester\n"
+                 "4. Differential Manchester\n5. AMI\n6. B8ZS\n7. HDB3\n";
+    const int scheme = read_number("Decode scheme (1-7): ", 1, 7);
+    switch (scheme) {
+        case 1:
+            return decode_nrz_l(signal);
+        case 2:
+            return decode_nrz_i(signal);
+        case 3:
+            return decode_manchester(signal);
+        case 4:
+            return decode_differential_manchester(signal);
+        case 5:
+            return decode_ami(signal);
+        case 6:
+            return decode_b8zs(signal);
+        default:
+            return decode_hdb3(signal);
+    }
+}
+
 void run_line_coding() {
     std::string data;
     std::cout << "1. Enter binary sequence\n2. Generate binary sequence\n";
@@ -113,6 +135,33 @@ void run_line_coding() {
         std::cout << ' ' << (level > 0 ? "+1" : level < 0 ? "-1" : "0");
     }
     std::cout << '\n';
+}
+
+void run_line_decoding() {
+    std::cout << "Enter encoded voltage levels separated by spaces (-1, 0, +1): ";
+    std::string line;
+    if (!std::getline(std::cin, line)) {
+        throw std::invalid_argument("Input ended unexpectedly.");
+    }
+
+    std::istringstream input(line);
+    std::vector<int> signal;
+    int level = 0;
+    while (input >> level) {
+        if (level < -1 || level > 1) {
+            throw std::invalid_argument("Voltage levels must be -1, 0 or +1.");
+        }
+        signal.push_back(level);
+        if (signal.size() > max_stream_length * 2) {
+            throw std::invalid_argument("Encoded signal is too long.");
+        }
+    }
+    if (!input.eof() || signal.empty()) {
+        throw std::invalid_argument("Enter one or more integer voltage levels separated by spaces.");
+    }
+
+    const std::string data = choose_decoding(signal);
+    std::cout << "Decoded binary sequence: " << data << '\n';
 }
 
 void run_pcm() {
@@ -165,14 +214,17 @@ int main() {
         std::cout << "SignalLab - ITT 036\n"
                      "1. Generate data and find longest palindrome\n"
                      "2. Line coding\n"
-                     "3. PCM sampling and reconstruction\n";
-        const int action = read_number("Option (1-3): ", 1, 3);
+                     "3. PCM sampling and reconstruction\n"
+                     "4. Decode line-coded signal\n";
+        const int action = read_number("Option (1-4): ", 1, 4);
         if (action == 1) {
             run_day_one_features();
         } else if (action == 2) {
             run_line_coding();
-        } else {
+        } else if (action == 3) {
             run_pcm();
+        } else {
+            run_line_decoding();
         }
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << '\n';

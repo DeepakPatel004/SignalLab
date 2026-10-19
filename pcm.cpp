@@ -14,19 +14,23 @@ unsigned quantization_levels(unsigned bit_depth) {
     return 1U << bit_depth;
 }
 
-double quantization_step(double minimum, double maximum) {
+double quantization_step(double minimum, double maximum, unsigned levels) {
     if (!std::isfinite(minimum) || !std::isfinite(maximum) ||
         !(minimum < maximum) || !std::isfinite(maximum - minimum)) {
         throw std::invalid_argument("PCM range must have finite minimum < maximum.");
     }
-    return (maximum - minimum);
+    const double step = (maximum - minimum) / levels;
+    if (!std::isfinite(step) || step == 0.0) {
+        throw std::invalid_argument("PCM range is too small or large for the selected bit depth.");
+    }
+    return step;
 }
 }
 
 std::string encode_pcm(const std::vector<double>& samples, unsigned bit_depth,
                        double minimum, double maximum) {
     const unsigned levels = quantization_levels(bit_depth);
-    const double range = quantization_step(minimum, maximum);
+    const double step = quantization_step(minimum, maximum, levels);
     if (samples.empty()) {
         throw std::invalid_argument("PCM requires at least one sample.");
     }
@@ -40,8 +44,7 @@ std::string encode_pcm(const std::vector<double>& samples, unsigned bit_depth,
 
         unsigned code = levels - 1;
         if (sample < maximum) {
-            const double normalized = (sample - minimum) / range;
-            code = static_cast<unsigned>(normalized * levels);
+            code = static_cast<unsigned>((sample - minimum) / step);
             if (code >= levels) {
                 code = levels - 1;
             }
@@ -56,14 +59,9 @@ std::string encode_pcm(const std::vector<double>& samples, unsigned bit_depth,
 std::vector<double> decode_pcm(const std::string& bitstream, unsigned bit_depth,
                                double minimum, double maximum) {
     const unsigned levels = quantization_levels(bit_depth);
-    const double range = quantization_step(minimum, maximum);
+    const double step = quantization_step(minimum, maximum, levels);
     if (bitstream.empty() || bitstream.size() % bit_depth != 0) {
         throw std::invalid_argument("PCM bitstream must contain complete, non-empty sample codes.");
-    }
-
-    const double step = range / levels;
-    if (!std::isfinite(step) || step == 0.0) {
-        throw std::invalid_argument("PCM range is too small or large for the selected bit depth.");
     }
 
     std::vector<double> reconstructed;
