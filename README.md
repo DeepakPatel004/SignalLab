@@ -14,7 +14,9 @@ Day 2: encode binary data using common line-coding schemes and AMI-based scrambl
 - Lengths from 0 to 10000; zero-sequence modes require at least 4 or 8 bits.
   Invalid input prints an error and exits. Run again to retry.
 - NRZ-L, NRZ-I, Manchester, Differential Manchester, AMI, B8ZS and HDB3
-  encoding, with voltage levels displayed as `+1`, `0` and `-1`.
+  encoding and decoding, with voltage levels displayed as `+1`, `0` and `-1`.
+- Uniform PCM encoding and decoding with a configurable sample range and
+  bit depth, plus CSV export of the reconstructed staircase.
 
 The generator fills the stream with random bits, then inserts the required zero
 sequence at a random position. Longer zero runs can occur naturally. Each run
@@ -23,7 +25,7 @@ uses a fresh random seed.
 ## Build
 
 ```sh
-g++ -std=c++17 -Wall -Wextra -Wpedantic main.cpp data_generator.cpp palindrome.cpp line_coding.cpp -o signallab
+g++ -std=c++17 -Wall -Wextra -Wpedantic main.cpp data_generator.cpp palindrome.cpp line_coding.cpp pcm.cpp -o signallab
 ```
 
 Run `./signallab` on Linux/macOS or `.\signallab.exe` in Windows PowerShell.
@@ -52,6 +54,37 @@ Voltage and transition conventions:
   pulses according to their substitution rules.
 - NRZ and AMI output one level per bit. Manchester schemes output two
   half-bit levels per bit.
+
+## Line decoding
+
+At the main menu, select `4`, enter the encoded voltage levels on one
+space-separated line, and select the matching scheme. The decoder derives bits
+from the levels and transitions, and rejects invalid voltage values, signal
+lengths or bipolar violations. NRZ-I and Differential Manchester assume the
+previous level was `+1`; AMI-based decoding assumes the previous mark was `-1`,
+so the first ordinary mark is `+1`. The Manchester decoder uses the same
+mid-bit convention as the encoder.
+
+## PCM
+
+At the main menu, select `3`. Enter the number of already-sampled input values,
+the bit depth (1-8), the quantizer's minimum and maximum, and each sample.
+Samples must be finite and lie within the selected range. The range is divided
+into `2^bit_depth` uniform intervals; each interval is encoded with its
+zero-based binary index, most-significant bit first. The decoder reconstructs
+the midpoint of each interval, so the displayed values are quantized
+approximations rather than the original samples.
+
+For example, with range `-1` to `1`, bit depth `2`, and samples `-1`, `0` and
+`1`, the bitstream is `00 10 11`; the decoded midpoint values are `-0.75`,
+`0.25` and `0.75`. The endpoint `1` maps to the final interval.
+
+The application prints original and decoded samples and writes
+`pcm_staircase.csv` in the current directory. It contains time, input sample,
+and decoded staircase columns; open it in a spreadsheet or plotting program,
+plot both value columns against time, and render the decoded series as a step
+plot to see the zero-order-hold reconstruction. A new PCM run overwrites this
+CSV file. No graphical plotting library is required.
 
 Examples (voltage levels are listed in bit order; Manchester levels are listed
 in half-bit order):
@@ -95,6 +128,7 @@ Palindrome length: 8
 - `data_generator.hpp` / `data_generator.cpp`: binary data generation.
 - `palindrome.hpp` / `palindrome.cpp`: longest palindrome search.
 - `line_coding.hpp` / `line_coding.cpp`: basic line codes and AMI scrambling.
+- `pcm.hpp` / `pcm.cpp`: uniform PCM encoder, decoder and staircase CSV export.
 
 ## Checks performed
 
@@ -104,4 +138,6 @@ including `101101`, `0000`, `11111` and `10101`.
 
 ## Next stages
 
-- Later: PCM or delta modulation, visualization, decoding and the specification report.
+- Day 4: add a graphical waveform viewer only if required; the PCM staircase
+  can already be plotted from the exported CSV.
+- No additional Day 4 requirements have been provided yet.
