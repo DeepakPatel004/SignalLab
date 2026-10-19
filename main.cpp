@@ -1,7 +1,9 @@
 #include "data_generator.hpp"
 #include "line_coding.hpp"
 #include "palindrome.hpp"
+#include "pcm.hpp"
 
+#include <cmath>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -19,6 +21,21 @@ int read_number(const std::string& prompt, int minimum, int maximum) {
     std::istringstream input(line);
     if (!(input >> value) || (input >> extra) || value < minimum || value > maximum) {
         throw std::invalid_argument("Enter a whole number in the displayed range.");
+    }
+    return value;
+}
+
+double read_sample_value(const std::string& prompt) {
+    std::cout << prompt;
+    std::string line;
+    double value = 0.0;
+    char extra = '\0';
+    if (!std::getline(std::cin, line)) {
+        throw std::invalid_argument("Input ended unexpectedly.");
+    }
+    std::istringstream input(line);
+    if (!(input >> value) || (input >> extra) || !std::isfinite(value)) {
+        throw std::invalid_argument("Enter one finite numeric sample value.");
     }
     return value;
 }
@@ -69,6 +86,28 @@ std::vector<int> choose_encoding(const std::string& data, std::string& name) {
     }
 }
 
+std::string choose_decoding(const std::vector<int>& signal) {
+    std::cout << "1. NRZ-L\n2. NRZ-I\n3. Manchester\n"
+                 "4. Differential Manchester\n5. AMI\n6. B8ZS\n7. HDB3\n";
+    const int scheme = read_number("Decode scheme (1-7): ", 1, 7);
+    switch (scheme) {
+        case 1:
+            return decode_nrz_l(signal);
+        case 2:
+            return decode_nrz_i(signal);
+        case 3:
+            return decode_manchester(signal);
+        case 4:
+            return decode_differential_manchester(signal);
+        case 5:
+            return decode_ami(signal);
+        case 6:
+            return decode_b8zs(signal);
+        default:
+            return decode_hdb3(signal);
+    }
+}
+
 void run_line_coding() {
     std::string data;
     std::cout << "1. Enter binary sequence\n2. Generate binary sequence\n";
@@ -98,16 +137,94 @@ void run_line_coding() {
     std::cout << '\n';
 }
 
+void run_line_decoding() {
+    std::cout << "Enter encoded voltage levels separated by spaces (-1, 0, +1): ";
+    std::string line;
+    if (!std::getline(std::cin, line)) {
+        throw std::invalid_argument("Input ended unexpectedly.");
+    }
+
+    std::istringstream input(line);
+    std::vector<int> signal;
+    int level = 0;
+    while (input >> level) {
+        if (level < -1 || level > 1) {
+            throw std::invalid_argument("Voltage levels must be -1, 0 or +1.");
+        }
+        signal.push_back(level);
+        if (signal.size() > max_stream_length * 2) {
+            throw std::invalid_argument("Encoded signal is too long.");
+        }
+    }
+    if (!input.eof() || signal.empty()) {
+        throw std::invalid_argument("Enter one or more integer voltage levels separated by spaces.");
+    }
+
+    const std::string data = choose_decoding(signal);
+    std::cout << "Decoded binary sequence: " << data << '\n';
+}
+
+void run_pcm() {
+    const int sample_count = read_number("Number of samples (1-1000): ", 1, 1000);
+    const int bit_depth = read_number("PCM bit depth (1-8): ", 1, 8);
+    const double minimum = read_sample_value("Quantization minimum: ");
+    const double maximum = read_sample_value("Quantization maximum: ");
+    if (!(minimum < maximum)) {
+        throw std::invalid_argument("Quantization minimum must be less than maximum.");
+    }
+
+    std::vector<double> samples;
+    samples.reserve(static_cast<std::size_t>(sample_count));
+    for (int i = 0; i < sample_count; ++i) {
+        const double sample = read_sample_value("Sample " + std::to_string(i + 1) + ": ");
+        if (sample < minimum || sample > maximum) {
+            throw std::invalid_argument("Each sample must be within the selected quantization range.");
+        }
+        samples.push_back(sample);
+    }
+
+    const auto bitstream = encode_pcm(samples, static_cast<unsigned>(bit_depth),
+                                      minimum, maximum);
+    const auto reconstructed = decode_pcm(bitstream, static_cast<unsigned>(bit_depth),
+                                          minimum, maximum);
+    std::cout << "Input samples:";
+    for (const double sample : samples) {
+        std::cout << ' ' << sample;
+    }
+    std::cout << "\nPCM bitstream (MSB first, grouped by sample): ";
+    for (std::size_t i = 0; i < bitstream.size(); i += static_cast<std::size_t>(bit_depth)) {
+        if (i != 0) {
+            std::cout << ' ';
+        }
+        std::cout << bitstream.substr(i, static_cast<std::size_t>(bit_depth));
+    }
+    std::cout << "\nReconstructed samples:\n";
+    for (std::size_t i = 0; i < samples.size(); ++i) {
+        std::cout << "  " << i << ": input " << samples[i]
+                  << ", decoded " << reconstructed[i] << '\n';
+    }
+
+    const std::string csv_file = "pcm_staircase.csv";
+    write_pcm_staircase_csv(samples, reconstructed, csv_file);
+    std::cout << "Staircase data written to " << csv_file << '\n';
+}
+
 int main() {
     try {
         std::cout << "SignalLab - ITT 036\n"
                      "1. Generate data and find longest palindrome\n"
-                     "2. Line coding\n";
-        const int action = read_number("Option (1-2): ", 1, 2);
+                     "2. Line coding\n"
+                     "3. PCM sampling and reconstruction\n"
+                     "4. Decode line-coded signal\n";
+        const int action = read_number("Option (1-4): ", 1, 4);
         if (action == 1) {
             run_day_one_features();
-        } else {
+        } else if (action == 2) {
             run_line_coding();
+        } else if (action == 3) {
+            run_pcm();
+        } else {
+            run_line_decoding();
         }
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << '\n';
