@@ -1,6 +1,6 @@
 #include "palindrome.hpp"
 
-std::string longest_palindrome(const std::string& data) {
+PalindromeRange find_longest_palindrome(const std::string& data) {
     std::size_t best_start = 0;
     std::size_t best_length = 0;
 
@@ -24,5 +24,10 @@ std::string longest_palindrome(const std::string& data) {
         expand(center, center);      // Odd-length palindromes.
         expand(center, center + 1);  // Even-length palindromes.
     }
-    return data.substr(best_start, best_length);
+    return {best_start, best_length};
+}
+
+std::string longest_palindrome(const std::string& data) {
+    const auto result = find_longest_palindrome(data);
+    return data.substr(result.start, result.length);
 }
