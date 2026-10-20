@@ -28,10 +28,12 @@ std::vector<int> encode_ami_based(const std::string& data, bool b8zs) {
     std::vector<int> signal;
     int last_pulse = -1;
     std::size_t marks_since_violation = 0;
+    const std::size_t substitution_length = b8zs ? 8 : 4;
 
     for (std::size_t i = 0; i < data.size();) {
         std::size_t zero_count = 0;
-        while (i + zero_count < data.size() && data[i + zero_count] == '0') {
+        while (zero_count < substitution_length && i + zero_count < data.size() &&
+               data[i + zero_count] == '0') {
             ++zero_count;
         }
 
@@ -249,6 +251,9 @@ std::string decode_b8zs(const std::vector<int>& signal) {
             last_pulse = level;
         }
     }
+    if (encode_b8zs(data) != signal) {
+        throw std::invalid_argument("Missing or invalid B8ZS substitution.");
+    }
     return data;
 }
 
@@ -292,6 +297,9 @@ std::string decode_hdb3(const std::vector<int>& signal) {
             last_pulse = level;
             ++marks_since_violation;
         }
+    }
+    if (encode_hdb3(data) != signal) {
+        throw std::invalid_argument("Missing or invalid HDB3 substitution or parity.");
     }
     return data;
 }
