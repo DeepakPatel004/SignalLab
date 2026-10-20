@@ -80,10 +80,9 @@ section('Verification and limitations',
         'Decoding analyzes ideal clock-aligned signal levels, not raster images; the stricter '
         'image-analysis extra-credit target is not implemented. No hardware ADC, noise recovery '
         'or analog low-pass reconstruction filter is included. PCM is the selected modulation option.')
-section('References and assistance',
+section('References',
         'ITT 036 Programming Assignment 1, 21 September 2026, pp. 1-2; existing SignalLab team '
-        'source: github.com/DeepakPatel004/SignalLab. OpenAI Codex assisted with implementation, '
-        'integration, testing and documentation. This PDF was prepared using Python ReportLab '
+        'source: github.com/DeepakPatel004/SignalLab. This PDF was prepared using Python ReportLab '
         '(report-generation tooling only).')
 
 

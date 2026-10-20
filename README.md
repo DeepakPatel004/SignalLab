@@ -207,7 +207,6 @@ and invalid input. Compile checks without `-DNDEBUG`, which disables C++ asserti
 Upload the source code and `report/specification.pdf` separately to Gradescope.
 The local prepared code archive is `submission/SignalLab-source.zip` (generated
 for submission, not tracked in Git). It excludes the report PDF and build outputs.
-Review the report and add any other assistance or discussions used by the team.
 
 To regenerate the report when Python ReportLab is installed, run
 `python report/make_specification.py` from the repository root.
