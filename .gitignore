@@ -9,3 +9,5 @@
 /submission/
 /pcm_staircase.csv
 __pycache__/
+/report/
+/tests/
