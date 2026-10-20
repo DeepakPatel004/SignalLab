@@ -5,3 +5,7 @@
 *.exe
 *.o
 *.obj
+/output/
+/submission/
+/pcm_staircase.csv
+__pycache__/

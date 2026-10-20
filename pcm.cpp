@@ -82,9 +82,12 @@ std::vector<double> decode_pcm(const std::string& bitstream, unsigned bit_depth,
 
 void write_pcm_staircase_csv(const std::vector<double>& samples,
                              const std::vector<double>& reconstructed,
-                             const std::string& filename) {
+                             const std::string& filename, double sample_interval) {
     if (samples.empty() || samples.size() != reconstructed.size()) {
         throw std::invalid_argument("PCM input and reconstructed samples must have equal non-zero lengths.");
+    }
+    if (!std::isfinite(sample_interval) || sample_interval <= 0) {
+        throw std::invalid_argument("Sample interval must be finite and positive.");
     }
 
     std::ofstream output(filename);
@@ -94,8 +97,8 @@ void write_pcm_staircase_csv(const std::vector<double>& samples,
     output << "time,input_sample,staircase_sample\n"
            << std::setprecision(std::numeric_limits<double>::max_digits10);
     for (std::size_t i = 0; i < samples.size(); ++i) {
-        output << i << ',' << samples[i] << ',' << reconstructed[i] << '\n'
-               << i + 1 << ",," << reconstructed[i] << '\n';
+        output << i * sample_interval << ',' << samples[i] << ',' << reconstructed[i] << '\n'
+               << (i + 1) * sample_interval << ",," << reconstructed[i] << '\n';
     }
     if (!output) {
         throw std::runtime_error("Could not write PCM CSV file: " + filename);
